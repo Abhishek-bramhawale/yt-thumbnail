@@ -3,4 +3,10 @@
 
 body {
   /* background-color: white !important; */
+  background-image: url('/bg.png'); 
+  background-size: cover;            
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-color: #000;
 }
+

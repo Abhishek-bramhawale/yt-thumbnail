@@ -48,13 +48,20 @@ async function getVideoIds(channelId){
     throw new Error("wrong channel url");
   }
   const playlistId= channelData.items[0].contentDetails.relatedPlaylists.uploads;
-  const playlistUrl= `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=${playlistId}&key=${API_KEY}`;
-  const playlistRes= await fetch(playlistUrl);
-  const playlistData= await playlistRes.json();
-  if(playlistData.error)throw new Error(playlistData.error.message);
-  const videoIds=(playlistData.items || []).map(
-   (item)=> item.contentDetails.videoId
-  );
+
+  let videoIds = [];
+  let nextPageToken = "";
+  do {
+    const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=${playlistId}&key=${API_KEY}${nextPageToken ? `&pageToken=${nextPageToken}` : ""}`;
+    const playlistRes = await fetch(playlistUrl);
+    const playlistData = await playlistRes.json();
+    if (playlistData.error) throw new Error(playlistData.error.message);
+    videoIds = videoIds.concat(
+      (playlistData.items || []).map(item => item.contentDetails.videoId)
+    );
+    nextPageToken = playlistData.nextPageToken;
+  } while (nextPageToken);
+
   return videoIds;
 }
 
@@ -126,7 +133,7 @@ export default function Main(){
   };
 
   return(
-    <div className="min-h-screen flex flex-col items-center justify-start p-6 bg-black text-white">
+    <div className="min-h-screen flex flex-col items-center justify-start p-6 text-white">
       <h1 className="text-3xl font-bold mb-6 text-center text-white">
         YouTube Channel Thumbnails
       </h1>
@@ -141,7 +148,7 @@ export default function Main(){
           value={channelUrl}
           onChange={(e)=> setChannelUrl(e.target.value)}
           required
-          className="flex-1 px-4 py-2 border border-white rounded-md focus:outline-none focus:ring-2 focus:ring-white bg-black text-white placeholder-gray-400"
+          className="flex-1 px-4 py-2 border border-white rounded-md focus:outline-none focus:ring-2 focus:ring-white text-white placeholder-gray-400"
         />
         <button
           type="submit"
@@ -152,46 +159,46 @@ export default function Main(){
         </button>
       </form>
 
-      <div style={{ marginBottom: '1rem' }}>
-        <label htmlFor="sort-select" style={{ marginRight: '0.5rem' }}>Sort by:</label>
-        <select
-          id="sort-select"
-          value={sortBy}
-          onChange={e=> handleSortChange(e.target.value)}
-          className="bg-gray-50 text-black px-2 py-1 rounded border border-gray-400 focus:outline-none"
-          >
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-          <option value="popular">Most Popular</option>
-        </select>
-        <span style={{ marginLeft: '1rem', color: '#666' }}>
-         {thumbnails.length}videos found
-        </span>
-      </div>
-
-     {error &&(
+      {error &&(
         <div className="text-red-500 font-medium mb-4">{error}</div>
       )}
 
-     {thumbnails.length > 0 &&(
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
+      {thumbnails.length > 0 && (
+        <>
+          <div className="mb-4 w-full max-w-5xl flex items-center">
+            <label htmlFor="sort-select" className="mr-2 text-white">Sort by:</label>
+            <select
+              id="sort-select"
+              value={sortBy}
+              onChange={e => handleSortChange(e.target.value)}
+              className="bg-white text-black px-2 py-1 rounded border border-gray-400 focus:outline-none"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              {/* <option value="popular">Most Popular</option> */}
+            </select>
+            <span className="ml-4 text-gray-400">
+              {thumbnails.length} videos found
+            </span>
+          </div>
 
-{thumbnails.map((thumb, idx)=> (
-   <div key={idx}className="relative group">
-     <img
-       src={thumb}
-       alt={`Thumbnail ${idx + 1}`}
-       className="w-[980px] h-auto rounded-md border border-white shadow-md hover:opacity-80 transition-all duration-300 cursor-pointer"
-       onClick={()=> downloadImage(thumb, `thumbnail-${idx + 1}.jpg`)}
-       loading="lazy"
-     />
-     <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 px-2 py-1 text-xs text-black bg-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
-       Click to download
-     </span>
-   </div>
- ))}
-</div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
+            {thumbnails.map((thumb, idx) => (
+              <div key={idx} className="relative group">
+                <img
+                  src={thumb}
+                  alt={`Thumbnail ${idx + 1}`}
+                  className="w-[980px] h-auto rounded-md border border-white shadow-md hover:opacity-80 transition-all duration-300 cursor-pointer"
+                  onClick={() => downloadImage(thumb, `thumbnail-${idx + 1}.jpg`)}
+                  loading="lazy"
+                />
+                <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 px-2 py-1 text-xs text-black bg-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click to download
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
