@@ -2,6 +2,46 @@
 
 import { useState } from "react";
 
+const API_KEY = process.env.YT_API_KEY; 
+
+function extractChannelId(url) {
+    try {
+      const u = new URL(url.trim());
+      const channelMatch = u.pathname.match(/\/channel\/([a-zA-Z0-9_-]+)/);
+      if (channelMatch) return channelMatch[1];
+  
+      const handleMatch = u.pathname.match(/^\/(@[a-zA-Z0-9._-]+)/);
+      if (handleMatch) return handleMatch[1];
+    } catch (err) {
+      if (/^[a-zA-Z0-9_-]{24}$/.test(url.trim())) return url.trim();
+    }
+    return null;
+  }
+
+
+
+async function getChannelIdFromHandle(handle) {
+  const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${handle}&key=${API_KEY}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error.message);
+
+    if (data.items && data.items.length > 0) {
+      return data.items[0].id.channelId;
+    }
+
+    throw new Error('Channel not found');
+  } catch (err) {
+    console.error('Error fetching channel ID:', err.message);
+    throw err;
+  }
+}
+
+
+
 export default function Main() {
   const [channelUrl, setChannelUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,6 +53,14 @@ export default function Main() {
     setError(null);
     setThumbnails([]);
     setLoading(true);
+
+    const channelId = extractChannelId(channelUrl);
+
+    if (!channelId) {
+      setError("enter valid channel id ");
+      setLoading(false);
+      return;
+    }
 
   
   };
