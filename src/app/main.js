@@ -57,11 +57,28 @@ async function getVideoIds(channelId){
   return videoIds;
 }
 
+
+
+async function downloadImage(url, filename){
+    try{
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }catch(err){
+      alert('Failed to download image.');
+    }
+  }
+
+  
 export default function Main(){
-  const [channelUrl, setChannelUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [thumbnails, setThumbnails] = useState([]);
+  const [channelUrl, setChannelUrl]=useState("");
+  const [loading, setLoading]=useState(false);
+  const [error, setError]=useState(null);
+  const [thumbnails, setThumbnails]=useState([]);
 
   const handleFetchThumbnails = async(e) => {
     e.preventDefault();
@@ -81,7 +98,7 @@ export default function Main(){
       const channelId = rawId.startsWith('@') ? await getChannelIdFromHandle(rawId) : rawId;
       const videoIds = await getVideoIds(channelId);
       const thumbs = videoIds.map(
-        (id) => `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+        (id) => `https://img.youtube.com/vi/${id}/maxresdefault.jpg`
       );
       setThumbnails(thumbs);
     } catch(err){
@@ -130,6 +147,8 @@ export default function Main(){
               src={thumb}
               alt={`Thumbnail ${idx + 1}`}
               className="w-full rounded-md border border-white"
+              onClick={() => downloadImage(thumb, `thumbnail-${idx + 1}.jpg`)} 
+
             />
           ))}
         </div>
