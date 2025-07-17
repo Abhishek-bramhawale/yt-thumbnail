@@ -2,70 +2,96 @@
 
 import { useState } from "react";
 
-const API_KEY = process.env.YT_API_KEY; 
+const API_KEY = process.env.NEXT_PUBLIC_YT_API_KEY; 
 
-function extractChannelId(url) {
+function extractChannelId(url){
     try {
       const u = new URL(url.trim());
       const channelMatch = u.pathname.match(/\/channel\/([a-zA-Z0-9_-]+)/);
-      if (channelMatch) return channelMatch[1];
+      if(channelMatch) return channelMatch[1];
   
       const handleMatch = u.pathname.match(/^\/(@[a-zA-Z0-9._-]+)/);
-      if (handleMatch) return handleMatch[1];
-    } catch (err) {
-      if (/^[a-zA-Z0-9_-]{24}$/.test(url.trim())) return url.trim();
+      if(handleMatch) return handleMatch[1];
+    } catch(err){
+      if(/^[a-zA-Z0-9_-]{24}$/.test(url.trim())) return url.trim();
     }
     return null;
   }
 
-
-
-async function getChannelIdFromHandle(handle) {
+async function getChannelIdFromHandle(handle){
   const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${handle}&key=${API_KEY}`;
 
   try {
     const res = await fetch(url);
     const data = await res.json();
 
-    if (data.error) throw new Error(data.error.message);
+    if(data.error) throw new Error(data.error.message);
 
-    if (data.items && data.items.length > 0) {
+    if(data.items && data.items.length > 0){
       return data.items[0].id.channelId;
     }
 
     throw new Error('Channel not found');
-  } catch (err) {
+  } catch(err){
     console.error('Error fetching channel ID:', err.message);
     throw err;
   }
 }
 
+async function getVideoIds(channelId){
+  const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${API_KEY}`;
+  const channelRes = await fetch(channelUrl);
+  const channelData = await channelRes.json();
+  if(channelData.error) throw new Error(channelData.error.message);
+  if(!channelData.items || channelData.items.length === 0){
+    throw new Error("wrong channel url");
+  }
+  const playlistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
+  const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=${playlistId}&key=${API_KEY}`;
+  const playlistRes = await fetch(playlistUrl);
+  const playlistData = await playlistRes.json();
+  if(playlistData.error) throw new Error(playlistData.error.message);
+  const videoIds =(playlistData.items || []).map(
+   (item) => item.contentDetails.videoId
+  );
+  return videoIds;
+}
 
-
-export default function Main() {
+export default function Main(){
   const [channelUrl, setChannelUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [thumbnails, setThumbnails] = useState([]);
 
-  const handleFetchThumbnails = (e) => {
+  const handleFetchThumbnails = async(e) => {
     e.preventDefault();
     setError(null);
     setThumbnails([]);
     setLoading(true);
 
-    const channelId = extractChannelId(channelUrl);
+    const rawId = extractChannelId(channelUrl);
 
-    if (!channelId) {
+    if(!rawId){
       setError("enter valid channel id ");
       setLoading(false);
       return;
     }
 
-  
+    try {
+      const channelId = rawId.startsWith('@') ? await getChannelIdFromHandle(rawId) : rawId;
+      const videoIds = await getVideoIds(channelId);
+      const thumbs = videoIds.map(
+        (id) => `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+      );
+      setThumbnails(thumbs);
+    } catch(err){
+      setError(err.message || "Something went wrong");                          
+    }
+
+    setLoading(false);
   };
 
-  return (
+  return(
     <div className="min-h-screen flex flex-col items-center justify-start p-6 bg-black text-white">
       <h1 className="text-3xl font-bold mb-6 text-center text-white">
         YouTube Channel Thumbnails
@@ -92,13 +118,13 @@ export default function Main() {
         </button>
       </form>
 
-      {error && (
+      {error &&(
         <div className="text-red-500 font-medium mb-4">{error}</div>
       )}
 
-      {thumbnails.length > 0 && (
+      {thumbnails.length > 0 &&(
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-5xl">
-          {thumbnails.map((thumb, idx) => (
+          {thumbnails.map((thumb, idx) =>(
             <img
               key={idx}
               src={thumb}
