@@ -140,18 +140,24 @@ export default function Main(){
       )}
 
       {thumbnails.length > 0 &&(
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-5xl">
-          {thumbnails.map((thumb, idx) =>(
-            <img
-              key={idx}
-              src={thumb}
-              alt={`Thumbnail ${idx + 1}`}
-              className="w-full rounded-md border border-white"
-              onClick={() => downloadImage(thumb, `thumbnail-${idx + 1}.jpg`)} 
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
 
-            />
-          ))}
-        </div>
+ {thumbnails.map((thumb, idx) => (
+   <div key={idx} className="relative group">
+     <img
+       src={thumb}
+       alt={`Thumbnail ${idx + 1}`}
+       className="w-[980px] h-auto rounded-md border border-white shadow-md hover:opacity-80 transition-all duration-300 cursor-pointer"
+       onClick={() => downloadImage(thumb, `thumbnail-${idx + 1}.jpg`)}
+       loading="lazy"
+     />
+     <span className="absolute bottom-2 left-1/2 transform -translate-x-1/2 px-2 py-1 text-xs text-black bg-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
+       Click to download
+     </span>
+   </div>
+ ))}
+</div>
+
       )}
     </div>
   );
